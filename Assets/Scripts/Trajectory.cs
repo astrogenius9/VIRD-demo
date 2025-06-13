@@ -9,42 +9,12 @@ public class Trajectory : MonoBehaviour
     //  data
     public MatchData _matchData;
     public MatchInteraction _matchInteraction;
-
-    public GameObject yBotPrefab;
-    public Transform playerTopFParent;
-    public Transform playerBottomFParent;
-
     private int trajectory_id = 0;
 
     // setting
     bool isLoaded = false;
     // player
-    string[] _bodyToModify = new string[] {
-    "mixamorig:Hips",
-    "mixamorig:LeftUpLeg",
-    "mixamorig:RightUpLeg",
-    "mixamorig:Spine",
-    "mixamorig:LeftLeg",
-    "mixamorig:RightLeg",
-    "mixamorig:Spine1",
-    "mixamorig:LeftFoot",
-    "mixamorig:RightFoot",
-    "mixamorig:Spine2",
-    "mixamorig:LeftToeBase",
-    "mixamorig:RightToeBase",
-    "mixamorig:Neck",
-    "mixamorig:LeftShoulder",
-    "mixamorig:RightShoulder",
-    "mixamorig:Head",
-    "mixamorig:LeftArm",
-    "mixamorig:RightArm",
-    "mixamorig:LeftForeArm",
-    "mixamorig:RightForeArm",
-    "mixamorig:LeftHand",
-    "mixamorig:RightHand",
-    "mixamorig:LeftHandIndex1",
-    "mixamorig:RightHandIndex1"
-};
+    string[] _bodyToModify = new string[] { "pelvis","left_hip","right_hip","spine1","left_knee","right_knee","spine2","left_ankle","right_ankle","spine3", "left_foot","right_foot","neck","left_collar","right_collar","head","left_shoulder","right_shoulder","left_elbow", "right_elbow","left_wrist","right_wrist","left_index1","right_index1" };
     Dictionary<string, Transform> _transformFromNamePlayerA;
     Dictionary<string, Transform> _transformFromNamePlayerB;
     public Quaternion[,] playerAPoses;
@@ -96,17 +66,6 @@ public class Trajectory : MonoBehaviour
     {
         
     }
-
-    void Start()
-    {
-        if (playerA_match0 == null) {
-            playerA_match0 = Instantiate(yBotPrefab, playerTopFParent);
-        }
-        if (playerB_match0 == null) {
-            playerB_match0 = Instantiate(yBotPrefab, playerBottomFParent);
-        }
-    }
-
 
     void Update()
     {
@@ -244,12 +203,22 @@ public class Trajectory : MonoBehaviour
                     float rodYB = float.Parse(bodyPosesB[i].Split(",")[j*3+3]);
                     float rodZB = float.Parse(bodyPosesB[i].Split(",")[j*3+4]);
 
-                    Quaternion quatA = QuatFromRodrigues(rodXA, rodZA, -rodYA);
-                    poses_playerA[i - 1, j] = quatA;
+                    if (j==0)
+                    {
+                        Quaternion quatA = QuatFromRodrigues(rodXA, rodYA, rodZA);
+                        Quaternion quatB = QuatFromRodrigues(rodXB, rodYB, rodZB);
+                        
+                        poses_playerA[i - 1,j] = quatA*Quaternion.Euler(0.0f, 0.0f, 180.0f);
+                        poses_playerB[i - 1,j] = quatB*Quaternion.Euler(0.0f, 0.0f, 180.0f);
+                    }
+                    else
+                    {
+                        Quaternion quatA = QuatFromRodrigues(-rodXA, rodYA, rodZA);
+                        Quaternion quatB = QuatFromRodrigues(-rodXB, rodYB, rodZB);
 
-                    Quaternion quatB = QuatFromRodrigues(rodXB, rodZB, -rodYB);
-                    quatB = Quaternion.Euler(-90, 0, 0) * quatB;
-                    poses_playerB[i - 1, j] = quatB;  
+                        poses_playerA[i - 1,j] = quatA;
+                        poses_playerB[i - 1,j] = quatB;
+                    }  
                 }
             }
 
@@ -316,14 +285,13 @@ public class Trajectory : MonoBehaviour
 
     public static Quaternion QuatFromRodrigues(float rodX, float rodY, float rodZ)
     {
-        float theta = Mathf.Sqrt(rodX * rodX + rodY * rodY + rodZ * rodZ);
-        if (theta < 1e-8f)
-            return Quaternion.identity;
-        float halfTheta = theta * 0.5f;
-        float sinHalfTheta = Mathf.Sin(halfTheta);
-        float cosHalfTheta = Mathf.Cos(halfTheta);
-        float k = sinHalfTheta / theta;
-        return new Quaternion(rodX * k, rodY * k, rodZ * k, cosHalfTheta);
+        Vector3 axis = new Vector3(rodX, rodY, rodZ);
+        float angle_deg = - axis.magnitude * Mathf.Rad2Deg;
+        Vector3.Normalize(axis);
+
+        Quaternion quat = Quaternion.AngleAxis(angle_deg, axis);
+  
+        return quat;
     }
 
     public void GetToTheGround()
